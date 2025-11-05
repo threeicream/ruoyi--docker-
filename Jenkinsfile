@@ -85,18 +85,25 @@ pipeline {
           sshagent(credentials: [env.SSH_CREDENTIALS_ID]) {
             sh """
               rsync -rpz ${env.BUILD_DIR}/${env.PACKAGE_JAR} ${env.SSH_USER}@${env.DOCKER_IP}:${env.DOCKER_DIR}
-              ssh ${env.SSH_USER}@${env.DOCKER_IP} "cd /afs/ry_compose && docker compose up -d"
+              ssh ${env.SSH_USER}@${env.DOCKER_IP} "
+                    cd /afs/ry_compose/ &&
+                    docker compose down --remove-orphans &&
+                    docker compose up -d --build --force-recreate
+            	"
             """
           }
         }
 
         post {
-          always {
-              echo "运行阶段结束。"
-          }
-          failure {
-              echo "运行失败，请检查日志！"
-          }
+          success {
+		      echo "运行阶段成功完成。"
+		  }
+		  failure {
+		      echo "运行失败，请检查日志！"
+		  }
+		  aborted { // 建议也加上 aborted，防止阶段被手动取消
+		      echo "运行阶段被中止。"
+		  }
         }  
       }
 
